@@ -1,0 +1,70 @@
+# Launches the app in the iOS Simulator and reports whether it survives.
+#
+# A crash on launch shows up here with a symbolicated backtrace, which a
+# sideloaded device build cannot give without a Mac and Xcode attached. If the
+# app survives here but not on a phone, the fault is in signing, not code.
+
+name: Simulator smoke test
+
+on:
+  push:
+    branches: [main]
+
+jobs:
+  launch:
+    runs-on: macos-15-intel
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          xcodebuild -version
+
+      - name: Generate project
+        run: brew install xcodegen && xcodegen generate
+
+      - name: Build for the simulator
+        run: |
+          xcodebuild build \
+            -project Bidyut.xcodeproj -scheme Bidyut -configuration Debug \
+            -sdk iphonesimulator -destination 'generic/platform=iOS Simulator' \
+            -derivedDataPath build/dd CODE_SIGNING_ALLOWED=NO \
+            | grep -E 'error:|\*\* ' || true
+          ls build/dd/Build/Products/Debug-iphonesimulator/Bidyut.app >/dev/null
+
+      - name: Boot a simulator
+        run: |
+          UDID=$(xcrun simctl list devices available -j \
+            | python3 -c "import json,sys; d=json.load(sys.stdin)['devices']; print(next(x['udid'] for k,v in d.items() if 'iOS' in k for x in v if 'iPhone' in x['name']))")
+          echo "UDID=$UDID" >> "$GITHUB_ENV"
+          xcrun simctl boot "$UDID"
+          xcrun simctl bootstatus "$UDID" -b
+
+      - name: Install and launch
+        run: |
+          xcrun simctl install "$UDID" build/dd/Build/Products/Debug-iphonesimulator/Bidyut.app
+          xcrun simctl launch "$UDID" com.codeyo.bidyut | tee launch.txt
+          sleep 15
+          if xcrun simctl spawn "$UDID" launchctl list | grep -q com.codeyo.bidyut; then
+            echo "RESULT: app still running after 15s"
+          else
+            echo "RESULT: app is not running — it crashed or exited"
+          fi
+
+      - name: Crash reports and log
+        if: always()
+        run: |
+          echo "===== crash reports ====="
+          for f in ~/Library/Logs/DiagnosticReports/Bidyut*; do
+            [ -f "$f" ] || continue
+            echo "--- $f"
+            head -c 20000 "$f"
+          done
+          echo
+          echo "===== unified log ====="
+          xcrun simctl spawn "$UDID" log show --last 3m --style compact \
+            --predicate 'process == "Bidyut" AND (messageType == error OR messageType == fault OR eventMessage CONTAINS[c] "fatal" OR eventMessage CONTAINS[c] "crash")' \
+            | tail -120 || true
