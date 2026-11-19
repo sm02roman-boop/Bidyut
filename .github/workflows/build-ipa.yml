@@ -16,13 +16,9 @@ on:
 
 jobs:
   build:
-    # Several macOS pools at once: if one has no capacity for this account,
-    # another may. Any successful job uploads a usable .ipa.
-    strategy:
-      fail-fast: false
-      matrix:
-        os: [macos-latest, macos-14, macos-15-intel, macos-26]
-    runs-on: ${{ matrix.os }}
+    # The Intel pool: the Apple-silicon pools never assigned a runner to this
+    # account, while this one picks jobs up straight away.
+    runs-on: macos-15-intel
     timeout-minutes: 40
 
     steps:
@@ -46,7 +42,7 @@ jobs:
       - name: Upload
         uses: actions/upload-artifact@v4
         with:
-          name: Bidyut-ipa-${{ matrix.os }}
+          name: Bidyut-ipa
           path: build/Bidyut.ipa
           if-no-files-found: error
           retention-days: 14

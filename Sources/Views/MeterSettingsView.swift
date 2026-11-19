@@ -27,7 +27,7 @@ struct MeterSettingsView: View {
                 }
 
                 Section {
-                    Picker(L10n.language, selection: $language) {
+                    Picker(L10n.languageLabel, selection: $language) {
                         ForEach(AppLanguage.allCases) { option in
                             Text(option.displayName).tag(option)
                         }

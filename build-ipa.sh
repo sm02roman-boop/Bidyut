@@ -52,7 +52,7 @@ xcodebuild archive \
   CODE_SIGNING_REQUIRED=NO \
   CODE_SIGNING_ALLOWED=NO \
   ENABLE_BITCODE=NO \
-  | grep -E '^(.*(error|warning):|\*\*)' || true
+  | grep -E 'error:|\*\* ' || true
 
 APP_PATH="${ARCHIVE}/Products/Applications/${SCHEME}.app"
 if [ ! -d "$APP_PATH" ]; then

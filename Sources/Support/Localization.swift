@@ -122,7 +122,7 @@ enum L10n {
 
     // Settings and actions
     static var settings: String { callAttention("Settings", "সেটিংস") }
-    static var language: String { callAttention("Language", "ভাষা") }
+    static var languageLabel: String { callAttention("Language", "ভাষা") }
     static var done: String { callAttention("Done", "সম্পন্ন") }
     static var cancel: String { callAttention("Cancel", "বাতিল") }
     static var addMeter: String { callAttention("Add meter", "মিটার যোগ করুন") }
