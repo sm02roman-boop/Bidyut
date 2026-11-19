@@ -1,0 +1,126 @@
+name: Bidyut
+options:
+  bundleIdPrefix: com.codeyo
+  deploymentTarget:
+    iOS: "17.0"
+  createIntermediateGroups: true
+  groupSortPosition: top
+
+settings:
+  base:
+    MARKETING_VERSION: "1.0"
+    CURRENT_PROJECT_VERSION: "1"
+    SWIFT_VERSION: "5.9"
+    DEVELOPMENT_TEAM: "" # Xcode > Signing & Capabilities will fill this in
+    CODE_SIGN_STYLE: Automatic
+    ENABLE_USER_SCRIPT_SANDBOXING: YES
+    SWIFT_EMIT_LOC_STRINGS: YES
+
+targets:
+
+  Bidyut:
+    type: application
+    platform: iOS
+    sources:
+      - path: Sources
+      - path: Resources/Assets.xcassets
+    dependencies:
+      - target: BidyutWidgetExtension
+        embed: true
+    entitlements:
+      path: Resources/Bidyut.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.codeyo.bidyut
+    info:
+      path: Resources/Info.plist
+      properties:
+        CFBundleDisplayName: Bidyut
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        UILaunchScreen: {}
+        UISupportedInterfaceOrientations:
+          - UIInterfaceOrientationPortrait
+        # Background refresh keeps the reading history growing while the app is
+        # closed, which is what makes the daily forecast possible at all.
+        UIBackgroundModes:
+          - fetch
+          - processing
+        BGTaskSchedulerPermittedIdentifiers:
+          - com.codeyo.bidyut.refresh
+        ITSAppUsesNonExemptEncryption: false
+        # The Lock Screen countdown during the last day or two before a recharge.
+        NSSupportsLiveActivities: true
+        NSSupportsLiveActivitiesFrequentUpdates: false
+        # Checked with canOpenURL before offering a wallet button; without these
+        # the check always answers false and the button would silently fall back.
+        LSApplicationQueriesSchemes:
+          - bkash
+          - bKash
+          - nagad
+          - com.konasl.nagad
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.codeyo.bidyut
+        INFOPLIST_KEY_UIApplicationSceneManifest_Generation: YES
+        ASSETCATALOG_COMPILER_APPICON_NAME: AppIcon
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1,2"
+
+  BidyutWidgetExtension:
+    type: app-extension
+    platform: iOS
+    sources:
+      - path: Widget
+      # Only the three files the widget genuinely needs. It never links the
+      # SwiftData model layer or the networking code.
+      - path: Sources/Services/SharedStore.swift
+      - path: Sources/Services/MeterActivityAttributes.swift
+      - path: Sources/Support/Theme.swift
+      - path: Sources/Support/Formatters.swift
+      - path: Sources/Support/Localization.swift
+      - path: Resources/Assets.xcassets
+    entitlements:
+      path: Resources/BidyutWidget.entitlements
+      properties:
+        com.apple.security.application-groups:
+          - group.com.codeyo.bidyut
+    info:
+      path: Resources/WidgetInfo.plist
+      properties:
+        CFBundleDisplayName: Bidyut
+        CFBundleShortVersionString: $(MARKETING_VERSION)
+        CFBundleVersion: $(CURRENT_PROJECT_VERSION)
+        NSExtension:
+          NSExtensionPointIdentifier: com.apple.widgetkit-extension
+        NSSupportsLiveActivities: true
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.codeyo.bidyut.widget
+        ASSETCATALOG_COMPILER_GLOBAL_ACCENT_COLOR_NAME: AccentColor
+        TARGETED_DEVICE_FAMILY: "1,2"
+
+  BidyutTests:
+    type: bundle.unit-test
+    platform: iOS
+    sources:
+      - path: Tests
+    dependencies:
+      - target: Bidyut
+    settings:
+      base:
+        PRODUCT_BUNDLE_IDENTIFIER: com.codeyo.bidyut.tests
+        GENERATE_INFOPLIST_FILE: YES
+
+schemes:
+  Bidyut:
+    build:
+      targets:
+        Bidyut: all
+        BidyutWidgetExtension: all
+    run:
+      config: Debug
+    test:
+      config: Debug
+      targets:
+        - BidyutTests

@@ -1,0 +1,46 @@
+# Builds an unsigned Bidyut.ipa on GitHub's macOS runners.
+#
+# For anyone without Xcode on their own Mac: GitHub's runners have it, so the
+# .ipa can be built there and downloaded, then signed and installed with
+# Sideloadly, which re-signs with your own Apple ID.
+#
+# Run it from the Actions tab ("Run workflow"), or by pushing to main. The
+# .ipa appears under the run's Artifacts.
+
+name: Build IPA
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+
+jobs:
+  build:
+    runs-on: macos-latest
+    timeout-minutes: 40
+
+    steps:
+      - uses: actions/checkout@v4
+
+      - name: Select Xcode
+        # The newest Xcode on the image; the project needs Xcode 15 or later.
+        run: |
+          sudo xcode-select -s "$(ls -d /Applications/Xcode*.app | sort -V | tail -1)"
+          xcodebuild -version
+
+      - name: Install XcodeGen
+        run: brew install xcodegen
+
+      - name: Generate project
+        run: xcodegen generate
+
+      - name: Build unsigned .ipa
+        run: ./build-ipa.sh
+
+      - name: Upload
+        uses: actions/upload-artifact@v4
+        with:
+          name: Bidyut-ipa
+          path: build/Bidyut.ipa
+          if-no-files-found: error
+          retention-days: 14

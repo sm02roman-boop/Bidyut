@@ -1,0 +1,12 @@
+# Xcode
+*.xcodeproj/
+build/
+DerivedData/
+*.xcuserstate
+xcuserdata/
+
+# Server runtime data and secrets
+server/data/
+server/config.json
+
+.DS_Store

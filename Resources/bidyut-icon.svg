@@ -1,0 +1,47 @@
+<svg xmlns="http://www.w3.org/2000/svg" width="1024" height="1024" viewBox="0 0 1024 1024">
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
+      <stop offset="0" stop-color="#16214A"/>
+      <stop offset="0.5" stop-color="#0B1026"/>
+      <stop offset="1" stop-color="#1B1540"/>
+    </linearGradient>
+
+    <radialGradient id="glowTeal" cx="0.22" cy="0.18" r="0.62">
+      <stop offset="0" stop-color="#1F8C86" stop-opacity="0.55"/>
+      <stop offset="1" stop-color="#1F8C86" stop-opacity="0"/>
+    </radialGradient>
+
+    <radialGradient id="glowBlue" cx="0.84" cy="0.86" r="0.62">
+      <stop offset="0" stop-color="#2A6FD6" stop-opacity="0.45"/>
+      <stop offset="1" stop-color="#2A6FD6" stop-opacity="0"/>
+    </radialGradient>
+
+    <linearGradient id="ring" x1="0.1" y1="0.95" x2="0.9" y2="0.05">
+      <stop offset="0" stop-color="#3C8DF0"/>
+      <stop offset="0.55" stop-color="#4FD1C5"/>
+      <stop offset="1" stop-color="#7BE8DC"/>
+    </linearGradient>
+
+    <linearGradient id="bolt" x1="0.3" y1="0" x2="0.7" y2="1">
+      <stop offset="0" stop-color="#FFFFFF"/>
+      <stop offset="1" stop-color="#D8E8FF"/>
+    </linearGradient>
+  </defs>
+
+  <!-- Ground -->
+  <rect width="1024" height="1024" fill="url(#bg)"/>
+  <rect width="1024" height="1024" fill="url(#glowTeal)"/>
+  <rect width="1024" height="1024" fill="url(#glowBlue)"/>
+
+  <!-- Meter gauge: a 290° arc with the gap at the bottom, the way a dial reads -->
+  <path d="M 291.2 827.4 A 385 385 0 1 1 732.8 827.4"
+        fill="none" stroke="#FFFFFF" stroke-opacity="0.10" stroke-width="58" stroke-linecap="round"/>
+  <path d="M 291.2 827.4 A 385 385 0 1 1 732.8 827.4"
+        fill="none" stroke="url(#ring)" stroke-width="46" stroke-linecap="round"
+        stroke-dasharray="1460 2000" stroke-dashoffset="0"/>
+
+  <!-- Bolt -->
+  <g transform="translate(253.25 237.25) scale(22.5)">
+    <path d="M13 2L4.5 13.2H11l-1 8.8L18.5 10.8H12z" fill="url(#bolt)"/>
+  </g>
+</svg>

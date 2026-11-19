@@ -1,0 +1,7 @@
+{
+  "meters": ["12345678"],
+  "token": "CHANGE-ME-to-a-long-random-string",
+  "port": 8099,
+  "pollMinutes": 15,
+  "dataDir": "./data"
+}
