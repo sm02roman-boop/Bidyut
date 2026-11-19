@@ -31,11 +31,14 @@ actor NescoClient {
             self.session = session
         } else {
             let configuration = URLSessionConfiguration.ephemeral
-            // A fresh cookie jar per client keeps the portal session isolated and
-            // carries the cookie from the GET into the POST automatically.
-            configuration.httpCookieStorage = HTTPCookieStorage()
-            configuration.httpShouldSetCookies = true
-            configuration.httpCookieAcceptPolicy = .always
+            // Cookies are carried by hand (see `PortalSession`), so automatic
+            // handling is switched off. Leaving it on alongside a hand-built
+            // Cookie header would send the session twice and confuse Laravel;
+            // and a bare `HTTPCookieStorage()` — what this used to set — stores
+            // nothing at all on iOS, which is how the session cookie was lost
+            // and every POST came back 419.
+            configuration.httpShouldSetCookies = false
+            configuration.httpCookieAcceptPolicy = .never
             configuration.timeoutIntervalForRequest = 30
             configuration.waitsForConnectivity = false
             self.session = URLSession(configuration: configuration)
@@ -50,9 +53,18 @@ actor NescoClient {
     /// balance and recharge history are still returned.
     func fetchSnapshot(customerNumber: String) async throws -> NescoSnapshot {
         let customer = try Self.validate(customerNumber)
-        let session = try await startSession()
+        var session = try await startSession()
 
-        let historyHTML = try await submit(action: .rechargeHistory, customer: customer, session: session)
+        let historyHTML: String
+        do {
+            historyHTML = try await submit(action: .rechargeHistory, customer: customer, session: &session)
+        } catch NescoError.httpStatus(419) {
+            // 419 is Laravel's "page expired": the token and the session cookie
+            // no longer agree. A fresh session almost always clears it, so try
+            // exactly once more before reporting it.
+            session = try await startSession()
+            historyHTML = try await submit(action: .rechargeHistory, customer: customer, session: &session)
+        }
 
         let info = NescoParser.parseCustomerInfo(from: historyHTML)
         let recharges = NescoParser.parseRecharges(from: historyHTML)
@@ -64,7 +76,7 @@ actor NescoClient {
         }
 
         var monthly: [NescoMonthlyUsage] = []
-        if let monthlyHTML = try? await submit(action: .monthlyUsage, customer: customer, session: session) {
+        if let monthlyHTML = try? await submit(action: .monthlyUsage, customer: customer, session: &session) {
             monthly = NescoParser.parseMonthlyUsage(from: monthlyHTML)
         }
 
@@ -93,8 +105,39 @@ actor NescoClient {
 
     // MARK: - Session flow
 
+    /// One conversation with the portal: its CSRF token and the cookies that
+    /// go with it.
+    ///
+    /// Laravel ties the token to the session cookie, so the cookie from the
+    /// GET has to come back on every POST or the portal answers 419. It also
+    /// rotates its cookies on each response, so the jar is refreshed after
+    /// every request rather than captured once.
     private struct PortalSession {
-        let token: String
+        var token: String
+        var cookies: [String: String] = [:]
+
+        mutating func absorbCookies(from response: URLResponse) {
+            guard let http = response as? HTTPURLResponse,
+                  let url = http.url else { return }
+
+            var fields: [String: String] = [:]
+            for (key, value) in http.allHeaderFields {
+                if let key = key as? String, let value = value as? String {
+                    fields[key] = value
+                }
+            }
+            for cookie in HTTPCookie.cookies(withResponseHeaderFields: fields, for: url) {
+                cookies[cookie.name] = cookie.value
+            }
+        }
+
+        var cookieHeader: String? {
+            guard !cookies.isEmpty else { return nil }
+            return cookies
+                .sorted { $0.key < $1.key }
+                .map { "\($0.key)=\($0.value)" }
+                .joined(separator: "; ")
+        }
     }
 
     private func startSession() async throws -> PortalSession {
@@ -111,10 +154,17 @@ actor NescoClient {
         guard let token = NescoParser.csrfToken(in: html) else {
             throw NescoError.noCSRFToken
         }
-        return PortalSession(token: token)
+
+        var session = PortalSession(token: token)
+        session.absorbCookies(from: response)
+        return session
     }
 
-    private func submit(action: SubmitAction, customer: String, session: PortalSession) async throws -> String {
+    private func submit(
+        action: SubmitAction,
+        customer: String,
+        session: inout PortalSession
+    ) async throws -> String {
         var request = URLRequest(url: Self.panelURL)
         request.httpMethod = "POST"
         request.setValue("application/x-www-form-urlencoded", forHTTPHeaderField: "Content-Type")
@@ -122,6 +172,10 @@ actor NescoClient {
         request.setValue(Self.panelURL.absoluteString, forHTTPHeaderField: "Referer")
         request.setValue(Self.userAgent, forHTTPHeaderField: "User-Agent")
         request.setValue("text/html,application/xhtml+xml", forHTTPHeaderField: "Accept")
+
+        if let cookie = session.cookieHeader {
+            request.setValue(cookie, forHTTPHeaderField: "Cookie")
+        }
 
         request.httpBody = Self.formBody([
             "_token": session.token,
@@ -131,7 +185,15 @@ actor NescoClient {
 
         let (data, response) = try await perform(request)
         try Self.checkStatus(response)
-        return Self.decode(data)
+        session.absorbCookies(from: response)
+
+        let html = Self.decode(data)
+        // The portal re-issues its token with each page; the next POST in this
+        // session must carry the new one.
+        if let next = NescoParser.csrfToken(in: html) {
+            session.token = next
+        }
+        return html
     }
 
     private func perform(_ request: URLRequest) async throws -> (Data, URLResponse) {

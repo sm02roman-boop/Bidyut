@@ -146,6 +146,8 @@ enum NescoError: LocalizedError, Equatable {
         switch self {
         case .httpStatus(403):
             return "The portal blocks non-Bangladeshi networks. Turn off any VPN and try again on your mobile data or local Wi-Fi."
+        case .httpStatus(419):
+            return "The portal's session expired before the request reached it. Wait a moment and try again."
         case .offline:
             return "The NESCO portal is only reachable from Bangladesh."
         default:
