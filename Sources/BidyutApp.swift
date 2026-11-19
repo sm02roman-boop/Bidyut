@@ -16,7 +16,12 @@ struct BidyutApp: App {
         } catch {
             fatalError("Could not open the local store: \(error)")
         }
-        registerBackgroundRefresh()
+        // No background-refresh request here. SwiftUI registers the handler
+        // for `refreshTaskID` through `.backgroundTask` once the scene exists,
+        // which is after `init`. Submitting a request before its handler is
+        // registered trips an assertion in BGTaskScheduler and kills the app
+        // on launch, so the request is made when the app goes to the
+        // background instead — see `RootView`.
     }
 
     /// The schema, in one place, so every entry point opens the same store.
@@ -64,13 +69,12 @@ struct BidyutApp: App {
 
     // MARK: - Background refresh
 
-    private func registerBackgroundRefresh() {
-        Self.scheduleNextRefresh()
-    }
-
     /// iOS decides when this actually runs; asking for four hours is a hint, not
     /// a schedule. The forecast tolerates gaps because it works from elapsed
     /// time between readings rather than assuming a fixed cadence.
+    ///
+    /// Only call this once the scene is up. Before then there is no registered
+    /// handler and the scheduler asserts.
     static func scheduleNextRefresh() {
         let request = BGAppRefreshTaskRequest(identifier: refreshTaskID)
         request.earliestBeginDate = Date(timeIntervalSinceNow: 4 * 3_600)
@@ -98,6 +102,7 @@ struct BidyutApp: App {
 /// Shows the dashboard once a meter exists, and onboarding before that.
 struct RootView: View {
     @Environment(\.modelContext) private var context
+    @Environment(\.scenePhase) private var scenePhase
     @Query(sort: \Meter.createdAt) private var meters: [Meter]
 
     var body: some View {
@@ -109,5 +114,13 @@ struct RootView: View {
             }
         }
         .tint(Theme.accent)
+        // Ask for the next background refresh as the app leaves the screen. By
+        // now `.backgroundTask` has registered the handler, so the scheduler
+        // accepts the request.
+        .onChange(of: scenePhase) { _, phase in
+            if phase == .background {
+                BidyutApp.scheduleNextRefresh()
+            }
+        }
     }
 }
