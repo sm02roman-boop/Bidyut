@@ -14,6 +14,9 @@ on:
   push:
     branches: [main]
 
+permissions:
+  contents: write
+
 jobs:
   build:
     # The Intel pool: the Apple-silicon pools never assigned a runner to this
@@ -46,3 +49,24 @@ jobs:
           path: build/Bidyut.ipa
           if-no-files-found: error
           retention-days: 14
+
+      - name: Publish to the "latest" release
+        # A stable download link that works from a phone browser.
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          gh release delete latest --yes --cleanup-tag 2>/dev/null || true
+          gh release create latest build/Bidyut.ipa \
+            --title "Bidyut (latest build)" \
+            --notes "Unsigned build of ${GITHUB_SHA::7}. Install with Sideloadly using your own Apple ID." \
+            --prerelease
+
+      - name: Publish to the ipa branch
+        # Also on a branch, so the .ipa can be fetched with plain git.
+        run: |
+          mkdir /tmp/ipa-branch && cp build/Bidyut.ipa /tmp/ipa-branch/
+          cd /tmp/ipa-branch
+          git init -q -b ipa
+          git -c user.name="github-actions" -c user.email="actions@github.com" add Bidyut.ipa
+          git -c user.name="github-actions" -c user.email="actions@github.com" commit -q -m "Build ${GITHUB_SHA::7}"
+          git push -f "https://x-access-token:${{ github.token }}@github.com/${{ github.repository }}" ipa
