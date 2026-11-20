@@ -53,9 +53,42 @@ enum Theme {
         }
     }
 
-    static let cardBackground = Color(.secondarySystemGroupedBackground)
-    static let pageBackground = Color(.systemGroupedBackground)
+    /// Frosted glass: the material blurs whatever sits behind a card, so the
+    /// backdrop below has to carry colour for the effect to show.
+    static let cardBackground: Material = .ultraThinMaterial
     static let cornerRadius: CGFloat = 16
+
+    /// A dark, colour-rich backdrop with soft glows, which the glass cards refract.
+    struct GlassBackdrop: View {
+        @Environment(\.colorScheme) private var colorScheme
+
+        var body: some View {
+            ZStack {
+                LinearGradient(
+                    colors: colorScheme == .dark
+                        ? [Color(red: 0.04, green: 0.05, blue: 0.14), Color(red: 0.09, green: 0.04, blue: 0.24), Color(red: 0.02, green: 0.13, blue: 0.16)]
+                        : [Color(red: 0.86, green: 0.91, blue: 1.0), Color(red: 0.93, green: 0.88, blue: 1.0), Color(red: 0.84, green: 0.97, blue: 0.96)],
+                    startPoint: .topLeading, endPoint: .bottomTrailing
+                )
+                Circle()
+                    .fill(Color(red: 0.11, green: 0.44, blue: 0.85).opacity(colorScheme == .dark ? 0.55 : 0.35))
+                    .frame(width: 320, height: 320)
+                    .blur(radius: 60)
+                    .offset(x: -120, y: -260)
+                Circle()
+                    .fill(Color(red: 0.71, green: 0.27, blue: 0.23).opacity(colorScheme == .dark ? 0.35 : 0.2))
+                    .frame(width: 300, height: 300)
+                    .blur(radius: 60)
+                    .offset(x: 140, y: 80)
+                Circle()
+                    .fill(Color(red: 0.09, green: 0.50, blue: 0.48).opacity(colorScheme == .dark ? 0.4 : 0.25))
+                    .frame(width: 280, height: 280)
+                    .blur(radius: 60)
+                    .offset(x: -100, y: 360)
+            }
+            .ignoresSafeArea()
+        }
+    }
 }
 
 /// A plain card used throughout the dashboard.
@@ -75,6 +108,17 @@ struct Card<Content: View>: View {
         .frame(maxWidth: .infinity, alignment: .leading)
         .padding(16)
         .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+        .overlay(
+            RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous)
+                .strokeBorder(
+                    LinearGradient(
+                        colors: [.white.opacity(0.45), .white.opacity(0.08)],
+                        startPoint: .topLeading, endPoint: .bottomTrailing
+                    ),
+                    lineWidth: 1
+                )
+        )
+        .shadow(color: .black.opacity(0.18), radius: 18, y: 8)
     }
 }
 

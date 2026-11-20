@@ -28,7 +28,7 @@ struct DashboardView: View {
                     ContentUnavailableView("No meter yet", systemImage: "bolt.horizontal")
                 }
             }
-            .background(Theme.pageBackground)
+            .background { Theme.GlassBackdrop() }
             .navigationTitle(selectedMeter?.displayName ?? "Bidyut")
             .navigationBarTitleDisplayMode(.inline)
             .toolbar { toolbar }
@@ -142,6 +142,7 @@ struct DashboardView: View {
                 }
                 .padding(16)
                 .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous))
+                .overlay(RoundedRectangle(cornerRadius: Theme.cornerRadius, style: .continuous).strokeBorder(.white.opacity(0.25), lineWidth: 1))
             }
             .buttonStyle(.plain)
 
@@ -281,6 +282,7 @@ struct BalanceHeroCard: View {
         .frame(maxWidth: .infinity)
         .padding(.vertical, 24)
         .background(Theme.cardBackground, in: RoundedRectangle(cornerRadius: 20, style: .continuous))
+        .overlay(RoundedRectangle(cornerRadius: 20, style: .continuous).strokeBorder(.white.opacity(0.25), lineWidth: 1))
         .overlay(alignment: .topTrailing) {
             if isSyncing {
                 ProgressView().padding(12)

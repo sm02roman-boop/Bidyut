@@ -11,6 +11,8 @@ struct MeterSettingsView: View {
 
     @State private var showingDeleteConfirmation = false
     @State private var language = LanguageSettings.current
+    @State private var serverURL = ServerSettings.url
+    @State private var serverToken = ServerSettings.token
 
     private var threshold: Binding<Double> {
         Binding(
@@ -24,6 +26,20 @@ struct MeterSettingsView: View {
             Form {
                 Section(L10n.callAttention("Name", "নাম")) {
                     TextField(L10n.callAttention("Nickname", "ডাকনাম"), text: $meter.nickname)
+                }
+
+                Section {
+                    TextField("https://your-server.example", text: $serverURL)
+                        .keyboardType(.URL)
+                        .textInputAutocapitalization(.never)
+                        .autocorrectionDisabled()
+                        .onChange(of: serverURL) { _, value in ServerSettings.url = value }
+                    SecureField("Token", text: $serverToken)
+                        .onChange(of: serverToken) { _, value in ServerSettings.token = value }
+                } header: {
+                    Text("Server")
+                } footer: {
+                    Text("Your Bidyut poller's address and token. Once set, the app reads the balance the poller keeps fresh every 15 minutes and shows when it last read the portal. Leave blank to read the portal directly.")
                 }
 
                 Section {

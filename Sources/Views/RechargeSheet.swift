@@ -41,7 +41,7 @@ struct RechargeSheet: View {
                 }
                 .padding(16)
             }
-            .background(Theme.pageBackground)
+            .background { Theme.GlassBackdrop() }
             .navigationTitle(L10n.recharge)
             .navigationBarTitleDisplayMode(.inline)
             .toolbar {

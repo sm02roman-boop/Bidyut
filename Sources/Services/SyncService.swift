@@ -23,8 +23,19 @@ final class SyncService {
         case unchanged
     }
 
+    /// Prefers the poller when one is configured, because it reads the portal on
+    /// a schedule and keeps the hourly history. If the poller is down, falls back
+    /// to reading the portal directly, which only works from a Bangladeshi network.
     @discardableResult
     func sync(meter: Meter) async throws -> SyncOutcome {
+        if let server = ServerClient() {
+            do {
+                let snapshot = try await server.fetchSnapshot(customerNumber: meter.customerNumber)
+                return apply(snapshot, to: meter)
+            } catch {
+                // Fall through to the portal below.
+            }
+        }
         let snapshot = try await client.fetchSnapshot(customerNumber: meter.customerNumber)
         return apply(snapshot, to: meter)
     }
