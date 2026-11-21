@@ -52,6 +52,11 @@ targets:
         # The Lock Screen countdown during the last day or two before a recharge.
         NSSupportsLiveActivities: true
         NSSupportsLiveActivitiesFrequentUpdates: false
+        # The poller runs on the home network at a plain http:// address, which
+        # App Transport Security blocks unless local networking is allowed.
+        NSAppTransportSecurity:
+          NSAllowsLocalNetworking: true
+        NSLocalNetworkUsageDescription: Bidyut reads your meter from the poller on your home network.
         # Checked with canOpenURL before offering a wallet button; without these
         # the check always answers false and the button would silently fall back.
         LSApplicationQueriesSchemes:
